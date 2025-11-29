@@ -1,54 +1,43 @@
 #!/usr/bin/python3
-"""
-Script that exports all employees' TODO list data to JSON format
-"""
+"""Script to export all employees' TODO lists to JSON format"""
 import json
 import requests
 
 
 if __name__ == "__main__":
-    # API base URL
     base_url = "https://jsonplaceholder.typicode.com"
     
-    # Fetch all users
-    users_url = f"{base_url}/users"
-    users_response = requests.get(users_url)
+    # Get all users
+    users_response = requests.get(f"{base_url}/users")
+    users_data = users_response.json()
     
-    if users_response.status_code != 200:
-        exit(1)
+    # Get all todos
+    todos_response = requests.get(f"{base_url}/todos")
+    todos_data = todos_response.json()
     
-    users = users_response.json()
+    # Build dictionary of all employees' tasks
+    all_tasks = {}
     
-    # Fetch all todos
-    todos_url = f"{base_url}/todos"
-    todos_response = requests.get(todos_url)
-    
-    if todos_response.status_code != 200:
-        exit(1)
-    
-    todos = todos_response.json()
-    
-    # Create dictionary with user_id as key and username mapping
-    user_dict = {user.get("id"): user.get("username") for user in users}
-    
-    # Organize todos by user
-    all_employees_data = {}
-    
-    for user_id in user_dict.keys():
-        user_tasks = []
+    for user in users_data:
+        user_id = str(user.get("id"))
+        username = user.get("username")
         
-        for task in todos:
-            if task.get("userId") == user_id:
-                user_tasks.append({
-                    "username": user_dict[user_id],
-                    "task": task.get("title"),
-                    "completed": task.get("completed")
-                })
+        # Filter tasks for this user
+        user_tasks = [task for task in todos_data 
+                      if task.get("userId") == user.get("id")]
         
-        all_employees_data[str(user_id)] = user_tasks
+        # Build task list for this user
+        tasks_list = []
+        for task in user_tasks:
+            tasks_list.append({
+                "username": username,
+                "task": task.get("title"),
+                "completed": task.get("completed")
+            })
+        
+        all_tasks[user_id] = tasks_list
     
-    # Export to JSON file
+    # Write to JSON file
     filename = "todo_all_employees.json"
-    
-    with open(filename, mode='w') as json_file:
-        json.dump(all_employees_data, json_file)
+    with open(filename, mode='w') as jsonfile:
+        json.dump(all_tasks, jsonfile)
